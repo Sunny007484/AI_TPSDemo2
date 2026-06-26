@@ -1,0 +1,21 @@
+# Unreal Engine generated/transient folders
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+
+# IDE / editor
+.vs/
+.vscode/
+*.VC.db
+*.opensdf
+*.opendb
+*.sdf
+*.sln
+*.suo
+*.xcodeproj
+*.xcworkspace
+
+# OS
+Thumbs.db
+.DS_Store
