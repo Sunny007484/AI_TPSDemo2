@@ -25,10 +25,13 @@ protected:
 	UFUNCTION()
 	void OnSlideTimerFinished();
 
+	void OnSlideMovementEnded();
+
 	// 滑铲冷却时长（用 Cooldown.Slide loose tag 实现，功能等价于 GE_Cooldown_Slide）。
 	UPROPERTY(EditDefaultsOnly, Category = "TS|Slide")
 	float CooldownDuration = 1.5f;
 
 private:
 	FTimerHandle CooldownTimerHandle;
+	FDelegateHandle SlideMovementEndedHandle;
 };

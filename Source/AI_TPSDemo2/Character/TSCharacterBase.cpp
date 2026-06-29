@@ -93,6 +93,19 @@ bool ATSCharacterBase::IsDeadOrDying() const
 	return AbilitySystemComponent && AbilitySystemComponent->HasMatchingGameplayTag(TSGameplayTags::State_Dead);
 }
 
+void ATSCharacterBase::Jump()
+{
+	if (UTSCharacterMovementComponent* MoveComp = Cast<UTSCharacterMovementComponent>(GetCharacterMovement()))
+	{
+		if (MoveComp->IsSliding())
+		{
+			MoveComp->InterruptSlideForJump();
+		}
+	}
+
+	Super::Jump();
+}
+
 void ATSCharacterBase::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);

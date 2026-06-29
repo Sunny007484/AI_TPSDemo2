@@ -11,6 +11,9 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "InputActionValue.h"
+#include "InputAction.h"
+#include "InputMappingContext.h"
+#include "UObject/ConstructorHelpers.h"
 
 ATSPlayerCharacter::ATSPlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -35,6 +38,27 @@ ATSPlayerCharacter::ATSPlayerCharacter(const FObjectInitializer& ObjectInitializ
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
+
+	// 默认复用第三人称模板输入资产（蓝图可覆盖）。
+	static ConstructorHelpers::FObjectFinder<UInputMappingContext> IMCDefault(
+		TEXT("/Game/Input/IMC_Default.IMC_Default"));
+	static ConstructorHelpers::FObjectFinder<UInputMappingContext> IMCMouseLook(
+		TEXT("/Game/Input/IMC_MouseLook.IMC_MouseLook"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> IAMove(
+		TEXT("/Game/Input/Actions/IA_Move.IA_Move"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> IALook(
+		TEXT("/Game/Input/Actions/IA_Look.IA_Look"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> IAMouseLook(
+		TEXT("/Game/Input/Actions/IA_MouseLook.IA_MouseLook"));
+	static ConstructorHelpers::FObjectFinder<UInputAction> IAJump(
+		TEXT("/Game/Input/Actions/IA_Jump.IA_Jump"));
+
+	if (IMCDefault.Succeeded()) { DefaultMappingContext = IMCDefault.Object; }
+	if (IMCMouseLook.Succeeded()) { MouseLookMappingContext = IMCMouseLook.Object; }
+	if (IAMove.Succeeded()) { MoveAction = IAMove.Object; }
+	if (IALook.Succeeded()) { LookAction = IALook.Object; }
+	if (IAMouseLook.Succeeded()) { MouseLookAction = IAMouseLook.Object; }
+	if (IAJump.Succeeded()) { JumpAction = IAJump.Object; }
 }
 
 void ATSPlayerCharacter::PossessedBy(AController* NewController)
@@ -62,6 +86,10 @@ void ATSPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 			{
 				Subsystem->AddMappingContext(DefaultMappingContext, 0);
 			}
+			if (MouseLookMappingContext)
+			{
+				Subsystem->AddMappingContext(MouseLookMappingContext, 1);
+			}
 		}
 	}
 
@@ -78,6 +106,10 @@ void ATSPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 	if (LookAction)
 	{
 		EIC->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATSPlayerCharacter::Input_Look);
+	}
+	if (MouseLookAction)
+	{
+		EIC->BindAction(MouseLookAction, ETriggerEvent::Triggered, this, &ATSPlayerCharacter::Input_Look);
 	}
 	if (JumpAction)
 	{

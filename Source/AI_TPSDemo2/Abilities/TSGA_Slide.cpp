@@ -4,6 +4,7 @@
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "Character/TSCharacterMovementComponent.h"
 #include "Core/TSGameplayTags.h"
+#include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "TimerManager.h"
@@ -50,6 +51,14 @@ void UTSGA_Slide::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const
 	}
 
 	Movement->StartSlide();
+	SlideMovementEndedHandle = Movement->OnSlideMovementEnded.AddUObject(this, &UTSGA_Slide::OnSlideMovementEnded);
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			-1, 2.f, FColor::Green, TEXT("Slide: 状态激活成功"));
+	}
+	UE_LOG(LogTemp, Log, TEXT("Slide: 状态激活成功"));
 
 	// 冷却：给 ASC 添加 Cooldown.Slide tag，CooldownDuration 后移除。
 	if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
@@ -80,7 +89,18 @@ void UTSGA_Slide::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const
 
 void UTSGA_Slide::OnSlideTimerFinished()
 {
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+	if (IsActive())
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+	}
+}
+
+void UTSGA_Slide::OnSlideMovementEnded()
+{
+	if (IsActive())
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+	}
 }
 
 void UTSGA_Slide::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -88,6 +108,8 @@ void UTSGA_Slide::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGam
 {
 	if (UTSCharacterMovementComponent* Movement = GetTSMovement(ActorInfo))
 	{
+		Movement->OnSlideMovementEnded.Remove(SlideMovementEndedHandle);
+		SlideMovementEndedHandle.Reset();
 		Movement->EndSlide();
 	}
 	if (ACharacter* Character = ActorInfo ? Cast<ACharacter>(ActorInfo->AvatarActor.Get()) : nullptr)

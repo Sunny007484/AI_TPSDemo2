@@ -35,6 +35,9 @@ public:
 	// 死亡处理入口，模块6 实现 Ragdoll/取消能力/重生等。
 	virtual void HandleDeath();
 
+	// 滑铲中跳跃会中断滑铲并保留速度起跳。
+	virtual void Jump() override;
+
 	//~ 蹲伏状态与 GameplayTag 同步
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;

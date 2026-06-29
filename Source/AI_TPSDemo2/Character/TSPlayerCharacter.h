@@ -49,11 +49,19 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "TS|Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
 
+	// 鼠标视角映射（与 DefaultMappingContext 叠加，优先级更高）。
+	UPROPERTY(EditDefaultsOnly, Category = "TS|Input")
+	TObjectPtr<UInputMappingContext> MouseLookMappingContext;
+
 	UPROPERTY(EditDefaultsOnly, Category = "TS|Input")
 	TObjectPtr<UInputAction> MoveAction;
 
 	UPROPERTY(EditDefaultsOnly, Category = "TS|Input")
 	TObjectPtr<UInputAction> LookAction;
+
+	// 鼠标 Look 输入（IA_MouseLook，与手柄 Look 分开映射）。
+	UPROPERTY(EditDefaultsOnly, Category = "TS|Input")
+	TObjectPtr<UInputAction> MouseLookAction;
 
 	UPROPERTY(EditDefaultsOnly, Category = "TS|Input")
 	TObjectPtr<UInputAction> JumpAction;

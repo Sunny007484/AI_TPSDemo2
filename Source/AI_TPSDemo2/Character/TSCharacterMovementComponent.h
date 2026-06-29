@@ -34,18 +34,30 @@ public:
 
 	// 滑铲控制（由 GA_Slide 调用）。
 	void StartSlide();
-	void EndSlide();
+	void EndSlide(bool bPreserveVelocity = false);
+	// 跳跃输入中断滑铲：保留当前速度并进入跳跃，空中逐渐减速至奔跑/行走速度。
+	void InterruptSlideForJump();
 	bool IsSliding() const;
 	float GetSlideDuration() const { return SlideDuration; }
+
+	// 移动组件因超时/摩擦/离地提前结束滑铲时广播（GA_Slide 监听以同步结束能力）。
+	DECLARE_MULTICAST_DELEGATE(FOnSlideMovementEnded);
+	FOnSlideMovementEnded OnSlideMovementEnded;
 
 	// 当前是否朝角色前向移动（冲刺仅前向有效）。
 	bool IsMovingForward() const;
 
 protected:
 	virtual void PhysCustom(float DeltaTime, int32 Iterations) override;
+	virtual void PhysFalling(float DeltaTime, int32 Iterations) override;
+	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
 
 	void PhysSlide(float DeltaTime, int32 Iterations);
+	void PhysSlideAirGap(float DeltaTime, int32 Iterations);
+	void ExitSlideToFalling();
 	bool GetSlideSurface(FHitResult& OutHit) const;
+	void ApplySlideJumpDeceleration(float DeltaTime);
+	float GetSlideJumpTargetSpeed() const;
 
 	UPROPERTY(EditDefaultsOnly, Category = "TS|Movement")
 	float SprintSpeed = 750.f;
@@ -53,8 +65,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "TS|Movement")
 	float ADSSpeed = 300.f;
 
+	// 滑铲进入时的目标水平速度（cm/s）。
 	UPROPERTY(EditDefaultsOnly, Category = "TS|Slide")
-	float SlideEnterImpulse = 900.f;
+	float SlideSpeed = 2500.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "TS|Slide")
 	float SlideMinSpeed = 350.f;
@@ -65,8 +78,20 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "TS|Slide")
 	float SlideFriction = 0.5f;
 
+	// 滑铲跳跃中断后，空中水平速度向目标速度插值的速率。
+	UPROPERTY(EditDefaultsOnly, Category = "TS|Slide")
+	float SlideJumpDecelerationRate = 3.f;
+
+	// 滑铲经过地面凹陷离地后，保留速度与滑铲状态的最长宽限时间（秒）。
+	UPROPERTY(EditDefaultsOnly, Category = "TS|Slide")
+	float SlideAirGapGraceDuration = 0.3f;
+
 private:
 	bool bWantsToSprint = false;
 	bool bAimingDownSights = false;
+	bool bSlideJumpDecelerating = false;
+	bool bSlideAirGapActive = false;
 	float SlideStartTime = 0.f;
+	float SlideAirGapStartTime = 0.f;
+	FVector SlideAirGapVelocity = FVector::ZeroVector;
 };
