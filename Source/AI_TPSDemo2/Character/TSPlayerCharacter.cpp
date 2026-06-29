@@ -1,7 +1,13 @@
 #include "Character/TSPlayerCharacter.h"
 
+#include "Abilities/TSGA_ADS.h"
+#include "Abilities/TSGA_Fire.h"
+#include "Abilities/TSGA_Reload.h"
+#include "Abilities/TSGA_WeaponSwitch.h"
+#include "Abilities/TSGE_InitAttributes.h"
 #include "Camera/CameraComponent.h"
 #include "Core/TSAbilitySystemComponent.h"
+#include "Core/TSGameplayTags.h"
 #include "Core/TSInputConfig.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -14,6 +20,11 @@
 #include "InputAction.h"
 #include "InputMappingContext.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Weapon/TSCombatComponent.h"
+#include "Weapon/TSWeaponBase.h"
+#include "Weapon/TSWeaponDataAsset.h"
+#include "DrawDebugHelpers.h"
+#include "Engine/Engine.h"
 
 ATSPlayerCharacter::ATSPlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -34,6 +45,8 @@ ATSPlayerCharacter::ATSPlayerCharacter(const FObjectInitializer& ObjectInitializ
 	CameraBoom->TargetArmLength = 250.f;
 	CameraBoom->SocketOffset = FVector(0.f, 50.f, 60.f);
 	CameraBoom->bUsePawnControlRotation = true;
+
+	PrimaryActorTick.bCanEverTick = true;
 
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
@@ -59,6 +72,13 @@ ATSPlayerCharacter::ATSPlayerCharacter(const FObjectInitializer& ObjectInitializ
 	if (IALook.Succeeded()) { LookAction = IALook.Object; }
 	if (IAMouseLook.Succeeded()) { MouseLookAction = IAMouseLook.Object; }
 	if (IAJump.Succeeded()) { JumpAction = IAJump.Object; }
+
+	// 战斗能力 C++ 默认注册（蓝图可追加 Sprint/Slide 等）。
+	DefaultAbilities.Add(UTSGA_Fire::StaticClass());
+	DefaultAbilities.Add(UTSGA_ADS::StaticClass());
+	DefaultAbilities.Add(UTSGA_Reload::StaticClass());
+	DefaultAbilities.Add(UTSGA_WeaponSwitch::StaticClass());
+	DefaultEffects.Add(UTSGE_InitAttributes::StaticClass());
 }
 
 void ATSPlayerCharacter::PossessedBy(AController* NewController)
@@ -67,10 +87,56 @@ void ATSPlayerCharacter::PossessedBy(AController* NewController)
 	InitAbilityActorInfo();
 }
 
+void ATSPlayerCharacter::GrantDefaultAbilities()
+{
+	// 确保战斗能力始终授予（蓝图 DefaultAbilities 可能只含 Sprint/Slide）。
+	DefaultAbilities.AddUnique(UTSGA_Fire::StaticClass());
+	DefaultAbilities.AddUnique(UTSGA_ADS::StaticClass());
+	DefaultAbilities.AddUnique(UTSGA_Reload::StaticClass());
+	DefaultAbilities.AddUnique(UTSGA_WeaponSwitch::StaticClass());
+	DefaultEffects.AddUnique(UTSGE_InitAttributes::StaticClass());
+
+	Super::GrantDefaultAbilities();
+}
+
 void ATSPlayerCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
 	InitAbilityActorInfo();
+}
+
+void ATSPlayerCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if (!bShowCombatDebug || !IsLocallyControlled())
+	{
+		return;
+	}
+
+	UTSCombatComponent* Combat = GetCombatComponent();
+	if (!Combat)
+	{
+		return;
+	}
+
+	FString DebugText = TEXT("Combat Debug\n");
+	if (const ATSWeaponBase* Current = Combat->GetCurrentWeapon())
+	{
+		DebugText += FString::Printf(TEXT("Current Slot: %d | %s\nAmmo: %d / Reserve: %d\n"),
+			Combat->GetCurrentSlotIndex(),
+			Current->GetWeaponData() ? *Current->GetWeaponData()->WeaponName.ToString() : TEXT("Unknown"),
+			Current->GetCurrentAmmo(), Current->GetCurrentReserve());
+
+		const FVector Muzzle = Current->GetMuzzleLocation();
+		DrawDebugSphere(GetWorld(), Muzzle, 6.f, 8, FColor::Orange, false, 0.f, 0, 1.5f);
+		DebugText += FString::Printf(TEXT("Muzzle: %s"), *Muzzle.ToCompactString());
+	}
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(INDEX_NONE, 0.f, FColor::Cyan, DebugText);
+	}
 }
 
 void ATSPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -127,6 +193,35 @@ void ATSPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 		{
 			if (!Action.InputAction || !Action.InputTag.IsValid())
 			{
+				continue;
+			}
+
+			// 切枪输入单独处理，以便写入目标槽位。
+			const FString ActionName = Action.InputAction->GetName();
+			if (ActionName.Contains(TEXT("WeaponSlot1")))
+			{
+				EIC->BindAction(Action.InputAction, ETriggerEvent::Started, this,
+					&ATSPlayerCharacter::RequestWeaponSwitch, 0);
+				continue;
+			}
+			if (ActionName.Contains(TEXT("WeaponSlot2")))
+			{
+				EIC->BindAction(Action.InputAction, ETriggerEvent::Started, this,
+					&ATSPlayerCharacter::RequestWeaponSwitch, 1);
+				continue;
+			}
+			if (ActionName.Contains(TEXT("WeaponScroll")))
+			{
+				EIC->BindAction(Action.InputAction, ETriggerEvent::Started, this,
+					&ATSPlayerCharacter::RequestWeaponSwitch, -2);
+				continue;
+			}
+
+			if (Action.TargetWeaponSlot != INDEX_NONE)
+			{
+				const int32 Slot = Action.TargetWeaponSlot;
+				EIC->BindAction(Action.InputAction, ETriggerEvent::Started, this,
+					&ATSPlayerCharacter::RequestWeaponSwitch, Slot);
 				continue;
 			}
 
@@ -188,4 +283,13 @@ void ATSPlayerCharacter::Input_AbilityTagReleased(FGameplayTag InputTag)
 	{
 		ASC->AbilityInputTagReleased(InputTag);
 	}
+}
+
+void ATSPlayerCharacter::RequestWeaponSwitch(int32 SlotIndex)
+{
+	if (UTSCombatComponent* Combat = GetCombatComponent())
+	{
+		Combat->SetPendingSwitchSlot(SlotIndex);
+	}
+	Input_AbilityTagPressed(TSGameplayTags::Ability_WeaponSwitch);
 }

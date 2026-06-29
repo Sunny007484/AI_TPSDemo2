@@ -30,4 +30,6 @@ namespace TSGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Weapon_Slot_Secondary, "Weapon.Slot.Secondary");
 
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Slide, "Cooldown.Slide");
+
+	UE_DEFINE_GAMEPLAY_TAG(Data_Damage, "Data.Damage");
 }

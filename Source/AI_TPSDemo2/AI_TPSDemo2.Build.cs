@@ -16,7 +16,7 @@ public class AI_TPSDemo2 : ModuleRules
 			"Core", "CoreUObject", "Engine", "InputCore",
 			"GameplayAbilities", "GameplayTags", "GameplayTasks",
 			"EnhancedInput", "AIModule", "NavigationSystem",
-			"UMG", "Slate", "SlateCore"
+			"UMG", "Slate", "SlateCore", "Niagara"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

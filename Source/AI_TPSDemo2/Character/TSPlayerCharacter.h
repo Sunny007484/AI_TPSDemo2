@@ -24,11 +24,13 @@ public:
 
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
+	virtual void Tick(float DeltaSeconds) override;
 
 	UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 	USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 
 protected:
+	virtual void GrantDefaultAbilities() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 	// 原生移动/视角输入
@@ -39,6 +41,7 @@ protected:
 	// 能力输入路由
 	void Input_AbilityTagPressed(FGameplayTag InputTag);
 	void Input_AbilityTagReleased(FGameplayTag InputTag);
+	void RequestWeaponSwitch(int32 SlotIndex);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "TS|Camera")
 	TObjectPtr<USpringArmComponent> CameraBoom;
@@ -72,4 +75,8 @@ protected:
 	// 战斗/移动能力的输入映射表（IA ↔ Ability InputTag）。
 	UPROPERTY(EditDefaultsOnly, Category = "TS|Input")
 	TObjectPtr<UTSInputConfig> InputConfig;
+
+	// DEMO 调试：屏幕显示弹药/Muzzle 信息（验收截图用）。
+	UPROPERTY(EditDefaultsOnly, Category = "TS|Debug")
+	bool bShowCombatDebug = true;
 };

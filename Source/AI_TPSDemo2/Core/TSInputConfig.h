@@ -19,6 +19,10 @@ struct FTSInputAction
 
 	UPROPERTY(EditDefaultsOnly, meta = (Categories = "Ability"))
 	FGameplayTag InputTag;
+
+	// 切枪输入专用：>=0 指定槽位，-2 表示 SwitchNext()，INDEX_NONE 表示普通能力路由。
+	UPROPERTY(EditDefaultsOnly)
+	int32 TargetWeaponSlot = INDEX_NONE;
 };
 
 UCLASS()

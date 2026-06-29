@@ -37,4 +37,10 @@ protected:
 	// Convenience accessors usable by derived abilities.
 	UFUNCTION(BlueprintPure, Category = "TS|Ability")
 	class ACharacter* GetCharacterFromActorInfo() const;
+
+	UFUNCTION(BlueprintPure, Category = "TS|Ability")
+	class ATSPlayerCharacter* GetTSPlayerCharacterFromActorInfo() const;
+
+	UFUNCTION(BlueprintPure, Category = "TS|Ability")
+	class UTSCombatComponent* GetCombatComponentFromActorInfo() const;
 };

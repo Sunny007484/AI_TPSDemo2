@@ -1,5 +1,6 @@
 #include "Abilities/TSGA_Slide.h"
 
+#include "Abilities/TSAbilityCommon.h"
 #include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "Character/TSCharacterMovementComponent.h"
@@ -8,22 +9,6 @@
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "TimerManager.h"
-
-namespace
-{
-	UTSCharacterMovementComponent* GetTSMovement(const FGameplayAbilityActorInfo* ActorInfo)
-	{
-		if (!ActorInfo)
-		{
-			return nullptr;
-		}
-		if (const ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get()))
-		{
-			return Cast<UTSCharacterMovementComponent>(Character->GetCharacterMovement());
-		}
-		return nullptr;
-	}
-}
 
 UTSGA_Slide::UTSGA_Slide()
 {
@@ -43,7 +28,7 @@ void UTSGA_Slide::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-	UTSCharacterMovementComponent* Movement = GetTSMovement(ActorInfo);
+	UTSCharacterMovementComponent* Movement = TSGetMovementFromActorInfo(ActorInfo);
 	if (!Movement || !CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -106,7 +91,7 @@ void UTSGA_Slide::OnSlideMovementEnded()
 void UTSGA_Slide::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	if (UTSCharacterMovementComponent* Movement = GetTSMovement(ActorInfo))
+	if (UTSCharacterMovementComponent* Movement = TSGetMovementFromActorInfo(ActorInfo))
 	{
 		Movement->OnSlideMovementEnded.Remove(SlideMovementEndedHandle);
 		SlideMovementEndedHandle.Reset();

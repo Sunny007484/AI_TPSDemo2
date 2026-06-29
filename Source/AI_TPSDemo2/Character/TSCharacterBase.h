@@ -12,6 +12,8 @@ class UTSAttributeSet;
 class UTSWeaponAttributeSet;
 class UTSGameplayAbility;
 class UGameplayEffect;
+class UTSCombatComponent;
+class UTSWeaponDataAsset;
 
 UCLASS(Abstract)
 class AI_TPSDEMO2_API ATSCharacterBase : public ACharacter, public IAbilitySystemInterface
@@ -27,6 +29,7 @@ public:
 
 	UTSAbilitySystemComponent* GetTSAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UTSAttributeSet* GetAttributeSet() const { return AttributeSet; }
+	UTSCombatComponent* GetCombatComponent() const { return CombatComponent; }
 
 	// 是否已死亡（含 State.Dead tag），细节在模块6 完善。
 	UFUNCTION(BlueprintPure, Category = "TS|State")
@@ -46,8 +49,9 @@ protected:
 	// ASC 初始化（Player 在 PossessedBy + OnRep_PlayerState；AI 在 PossessedBy 调用）。
 	virtual void InitAbilityActorInfo();
 
-	void GrantDefaultAbilities();
+	virtual void GrantDefaultAbilities();
 	void ApplyDefaultEffects();
+	void InitializeDefaultWeapons();
 
 	UPROPERTY(VisibleAnywhere, Category = "TS|Abilities")
 	TObjectPtr<UTSAbilitySystemComponent> AbilitySystemComponent;
@@ -65,4 +69,11 @@ protected:
 	// 角色启动时施加的效果（初始化属性，蓝图配置 GE_InitAttributes 等）。
 	UPROPERTY(EditDefaultsOnly, Category = "TS|Abilities")
 	TArray<TSubclassOf<UGameplayEffect>> DefaultEffects;
+
+	// 默认武器 DataAsset（Primary + Secondary）。
+	UPROPERTY(EditDefaultsOnly, Category = "TS|Weapon")
+	TArray<TObjectPtr<UTSWeaponDataAsset>> DefaultWeapons;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "TS|Weapon")
+	TObjectPtr<UTSCombatComponent> CombatComponent;
 };

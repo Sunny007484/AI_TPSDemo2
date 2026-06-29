@@ -42,4 +42,7 @@ namespace TSGameplayTags
 
 	// Cooldown.*
 	AI_TPSDEMO2_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Slide);
+
+	// SetByCaller 数据
+	AI_TPSDEMO2_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Damage);
 }

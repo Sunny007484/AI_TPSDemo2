@@ -1,24 +1,9 @@
 #include "Abilities/TSGA_Sprint.h"
 
+#include "Abilities/TSAbilityCommon.h"
 #include "Character/TSCharacterMovementComponent.h"
 #include "Core/TSGameplayTags.h"
 #include "GameFramework/Character.h"
-
-namespace
-{
-	UTSCharacterMovementComponent* GetTSMovement(const FGameplayAbilityActorInfo* ActorInfo)
-	{
-		if (!ActorInfo)
-		{
-			return nullptr;
-		}
-		if (const ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get()))
-		{
-			return Cast<UTSCharacterMovementComponent>(Character->GetCharacterMovement());
-		}
-		return nullptr;
-	}
-}
 
 UTSGA_Sprint::UTSGA_Sprint()
 {
@@ -43,7 +28,7 @@ void UTSGA_Sprint::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 		return;
 	}
 
-	if (UTSCharacterMovementComponent* Movement = GetTSMovement(ActorInfo))
+	if (UTSCharacterMovementComponent* Movement = TSGetMovementFromActorInfo(ActorInfo))
 	{
 		Movement->SetWantsToSprint(true);
 	}
@@ -58,7 +43,7 @@ void UTSGA_Sprint::InputReleased(const FGameplayAbilitySpecHandle Handle, const 
 void UTSGA_Sprint::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	if (UTSCharacterMovementComponent* Movement = GetTSMovement(ActorInfo))
+	if (UTSCharacterMovementComponent* Movement = TSGetMovementFromActorInfo(ActorInfo))
 	{
 		Movement->SetWantsToSprint(false);
 	}
