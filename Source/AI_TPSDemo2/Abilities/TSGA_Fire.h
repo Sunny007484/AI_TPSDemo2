@@ -41,6 +41,8 @@ protected:
 	float GetCurrentSpreadDegrees() const;
 	void ApplyRecoil();
 	void PlayFireFeedback();
+	// 弹匣空且仍有备弹时触发换弹能力。
+	void TryTriggerAutoReload() const;
 
 	UFUNCTION()
 	void OnFireTimerElapsed();

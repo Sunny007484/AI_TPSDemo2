@@ -8,6 +8,7 @@
 #include "Character/TSPlayerCharacter.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Core/TSCollisionChannels.h"
+#include "Core/TSAbilitySystemComponent.h"
 #include "Core/TSGameplayTags.h"
 #include "DrawDebugHelpers.h"
 #include "GameFramework/Character.h"
@@ -46,6 +47,16 @@ void UTSGA_Fire::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const 
 		return;
 	}
 
+	// 弹匣已空但仍有备弹：按开火直接自动换弹。
+	UTSCombatComponent* Combat = GetCombatComponentFromActorInfo();
+	ATSWeaponBase* Weapon = Combat ? Combat->GetCurrentWeapon() : nullptr;
+	if (Weapon && !Weapon->CanFire() && Weapon->GetCurrentAmmo() == 0 && Weapon->GetCurrentReserve() > 0)
+	{
+		TryTriggerAutoReload();
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		return;
+	}
+
 	ConsecutiveShots = 0;
 	FireOnce();
 }
@@ -74,6 +85,10 @@ void UTSGA_Fire::FireOnce()
 	ATSWeaponBase* Weapon = Combat ? Combat->GetCurrentWeapon() : nullptr;
 	if (!Weapon || !Weapon->CanFire())
 	{
+		if (Weapon && Weapon->GetCurrentAmmo() == 0 && Weapon->GetCurrentReserve() > 0)
+		{
+			TryTriggerAutoReload();
+		}
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
@@ -96,6 +111,14 @@ void UTSGA_Fire::FireOnce()
 			GetAvatarActorFromActorInfo(), TSGameplayTags::Event_Combat_Hit, EventData);
 	}
 
+	// 打完最后一发：弹匣空且仍有备弹则自动换弹。
+	if (Weapon->GetCurrentAmmo() == 0 && Weapon->GetCurrentReserve() > 0)
+	{
+		TryTriggerAutoReload();
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+		return;
+	}
+
 	// 半自动武器：单发后结束；自动武器在按住期间循环。
 	if (const UTSWeaponDataAsset* Data = Weapon->GetWeaponData())
 	{
@@ -107,6 +130,22 @@ void UTSGA_Fire::FireOnce()
 	}
 
 	ScheduleNextShot();
+}
+
+void UTSGA_Fire::TryTriggerAutoReload() const
+{
+	UTSCombatComponent* Combat = GetCombatComponentFromActorInfo();
+	const ATSWeaponBase* Weapon = Combat ? Combat->GetCurrentWeapon() : nullptr;
+	if (!Weapon || Weapon->GetCurrentAmmo() != 0 || Weapon->GetCurrentReserve() <= 0)
+	{
+		return;
+	}
+
+	if (UTSAbilitySystemComponent* ASC = Cast<UTSAbilitySystemComponent>(
+		CurrentActorInfo ? CurrentActorInfo->AbilitySystemComponent.Get() : nullptr))
+	{
+		ASC->AbilityInputTagPressed(TSGameplayTags::Ability_Reload);
+	}
 }
 
 void UTSGA_Fire::ScheduleNextShot()
@@ -287,7 +326,8 @@ void UTSGA_Fire::ApplyRecoil()
 	if (AController* Controller = Character->GetController())
 	{
 		FRotator NewRotation = Controller->GetControlRotation();
-		NewRotation += FRotator(-RecoilPitch, RecoilYaw, 0.f);
+		// 垂直后坐力：沿世界 Z 正向抬枪（Pitch 正向）。
+		NewRotation += FRotator(RecoilPitch, RecoilYaw, 0.f);
 		Controller->SetControlRotation(NewRotation);
 	}
 }
