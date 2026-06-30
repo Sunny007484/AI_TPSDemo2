@@ -3,6 +3,7 @@
 #include "Weapon/TSWeaponTypes.h"
 
 #include "AbilitySystemComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Character/TSCharacterMovementComponent.h"
 #include "Core/TSAbilitySystemComponent.h"
 #include "Core/TSAttributeSet.h"
@@ -198,5 +199,49 @@ void ATSCharacterBase::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeigh
 
 void ATSCharacterBase::HandleDeath()
 {
-	// 模块6 实现：取消能力、Ragdoll、AI 停 BT、玩家延时重生。
+	// 防重入：已在死亡流程中直接返回。
+	if (IsDeadOrDying())
+	{
+		return;
+	}
+
+	bDead = true;
+
+	if (AbilitySystemComponent)
+	{
+		// 打上死亡 tag 并取消所有进行中的能力。
+		AbilitySystemComponent->AddLooseGameplayTag(TSGameplayTags::State_Dead);
+		AbilitySystemComponent->CancelAllAbilities();
+	}
+
+	// 关闭胶囊碰撞，避免继续阻挡或被武器射线命中。
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+
+	// 停止并禁用移动。
+	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+	{
+		MoveComp->StopMovementImmediately();
+		MoveComp->DisableMovement();
+	}
+
+	// Mesh 进入 Ragdoll 物理模拟。
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		MeshComp->SetCollisionProfileName(TEXT("Ragdoll"));
+		MeshComp->SetSimulatePhysics(true);
+	}
+
+	// 缓存死亡时控制器，供子类重生/清理（UnPossess 后 GetController 失效）。
+	DeathController = GetController();
+
+	OnDeath();
+}
+
+void ATSCharacterBase::OnDeath()
+{
+	// 基类空实现，子类覆写具体死亡后续。
 }

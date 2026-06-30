@@ -15,4 +15,8 @@ public:
 	ATSAICharacter(const FObjectInitializer& ObjectInitializer);
 
 	virtual void PossessedBy(AController* NewController) override;
+
+protected:
+	// 死亡后停止行为树并延时 5.0s 销毁（决策点锁定）。
+	virtual void OnDeath() override;
 };

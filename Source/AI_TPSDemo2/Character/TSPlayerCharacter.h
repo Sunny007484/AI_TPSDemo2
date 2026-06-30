@@ -33,6 +33,9 @@ protected:
 	virtual void GrantDefaultAbilities() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
+	// 死亡后禁用输入并延时 3.0s 在出生点重生（决策点锁定）。
+	virtual void OnDeath() override;
+
 	// 原生移动/视角输入
 	void Input_Move(const FInputActionValue& Value);
 	void Input_Look(const FInputActionValue& Value);
