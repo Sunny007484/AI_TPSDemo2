@@ -65,4 +65,7 @@ private:
 
 	// 已订阅的 ASC（弱引用，便于解绑）。
 	TWeakObjectPtr<UAbilitySystemComponent> SubscribedASC;
+
+	// 同一射击帧内 Kill 已触发红色标记时，忽略紧随其后的 Hit 事件，避免被白色覆盖。
+	bool bSuppressNextHitMarker = false;
 };

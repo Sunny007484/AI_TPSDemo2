@@ -3,6 +3,8 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Character/TSCharacterBase.h"
 #include "Core/TSGameplayTags.h"
+#include "GameFramework/Controller.h"
+#include "GameFramework/Pawn.h"
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
 
@@ -90,12 +92,23 @@ void UTSAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 					// 先向来源发送击杀事件（击杀归属），再触发受击者死亡处理。
 					if (SourceActor)
 					{
+						// 击杀事件须发给持有 ASC 的击杀者 Pawn；来源解析为 Controller 时回退到其 Pawn，
+						// 否则 PlayerController（无 ASC）会导致事件派发失败，命中/击杀反馈无法触发。
+						AActor* KillEventActor = SourceActor;
+						if (AController* SourceController = Cast<AController>(KillEventActor))
+						{
+							if (APawn* SourcePawn = SourceController->GetPawn())
+							{
+								KillEventActor = SourcePawn;
+							}
+						}
+
 						FGameplayEventData KillPayload;
 						KillPayload.Instigator = SourceActor;
 						KillPayload.Target = TargetActor;
 						KillPayload.EventMagnitude = LocalDamage;
 						UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
-							SourceActor, TSGameplayTags::Event_Combat_Kill, KillPayload);
+							KillEventActor, TSGameplayTags::Event_Combat_Kill, KillPayload);
 					}
 
 					TargetCharacter->HandleDeath();

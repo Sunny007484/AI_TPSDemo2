@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Character/TSCharacterMovementComponent.h"
+#include "Character/TSCharacterBase.h"
 #include "Character/TSPlayerCharacter.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Core/TSCollisionChannels.h"
@@ -94,14 +95,16 @@ void UTSGA_Fire::FireOnce()
 	}
 
 	float DamageDealt = 0.f;
-	const bool bHit = PerformFireTrace(DamageDealt);
+	bool bWasKill = false;
+	const bool bHit = PerformFireTrace(DamageDealt, bWasKill);
 
 	Weapon->ConsumeAmmo();
 	ApplyRecoil();
 	PlayFireFeedback();
 	++ConsecutiveShots;
 
-	if (bHit && CurrentActorInfo && CurrentActorInfo->AbilitySystemComponent.IsValid())
+	// 致命一击已在 AttributeSet 中派发 Event.Combat.Kill；此处再发 Hit 会把击杀标记盖成白色。
+	if (bHit && !bWasKill && CurrentActorInfo && CurrentActorInfo->AbilitySystemComponent.IsValid())
 	{
 		FGameplayEventData EventData;
 		EventData.Instigator = GetAvatarActorFromActorInfo();
@@ -170,9 +173,10 @@ void UTSGA_Fire::OnFireTimerElapsed()
 	FireOnce();
 }
 
-bool UTSGA_Fire::PerformFireTrace(float& OutDamage) const
+bool UTSGA_Fire::PerformFireTrace(float& OutDamage, bool& OutWasKill) const
 {
 	OutDamage = 0.f;
+	OutWasKill = false;
 
 	const ATSPlayerCharacter* PlayerChar = GetTSPlayerCharacterFromActorInfo();
 	if (!PlayerChar)
@@ -265,6 +269,11 @@ bool UTSGA_Fire::PerformFireTrace(float& OutDamage) const
 
 	SpecHandle.Data->SetSetByCallerMagnitude(TSGameplayTags::Data_Damage, WeaponData->Damage);
 	SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+
+	if (const ATSCharacterBase* HitCharacter = Cast<ATSCharacterBase>(HitActor))
+	{
+		OutWasKill = HitCharacter->IsDeadOrDying();
+	}
 
 	OutDamage = WeaponData->Damage;
 	return true;

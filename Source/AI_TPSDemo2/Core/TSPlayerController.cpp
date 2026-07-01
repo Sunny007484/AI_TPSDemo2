@@ -105,11 +105,20 @@ void ATSPlayerController::UnsubscribeCombatEvents()
 
 void ATSPlayerController::HandleHitEvent(const FGameplayEventData* Payload)
 {
-	// 普通命中：触发命中标记（非击杀）。
-	if (HUDWidget)
+	if (!HUDWidget)
 	{
-		HUDWidget->OnHitMarker(false);
+		return;
 	}
+
+	// Kill 与 Hit 同帧到达时，保留击杀红色标记。
+	if (bSuppressNextHitMarker)
+	{
+		bSuppressNextHitMarker = false;
+		return;
+	}
+
+	// 普通命中：触发命中标记（非击杀）。
+	HUDWidget->OnHitMarker(false);
 }
 
 void ATSPlayerController::HandleKillEvent(const FGameplayEventData* Payload)
@@ -117,6 +126,7 @@ void ATSPlayerController::HandleKillEvent(const FGameplayEventData* Payload)
 	// 击杀确认：触发击杀样式命中标记，并播放击杀音效（若配置）。
 	if (HUDWidget)
 	{
+		bSuppressNextHitMarker = true;
 		HUDWidget->OnHitMarker(true);
 	}
 

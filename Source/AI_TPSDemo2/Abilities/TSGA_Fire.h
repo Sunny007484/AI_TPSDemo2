@@ -37,7 +37,7 @@ protected:
 
 	void FireOnce();
 	void ScheduleNextShot();
-	bool PerformFireTrace(float& OutDamage) const;
+	bool PerformFireTrace(float& OutDamage, bool& OutWasKill) const;
 	float GetCurrentSpreadDegrees() const;
 	void ApplyRecoil();
 	void PlayFireFeedback();
