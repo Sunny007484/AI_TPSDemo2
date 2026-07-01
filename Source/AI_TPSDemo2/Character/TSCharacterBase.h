@@ -46,6 +46,12 @@ public:
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 
 protected:
+	// 死亡后续处理钩子：基类空实现，子类覆写（玩家重生 / AI 清理）。
+	virtual void OnDeath();
+
+	// 死亡时缓存的控制器（UnPossess 后 GetController 失效，子类重生/清理时使用）。
+	AController* GetDeathController() const { return DeathController; }
+
 	// ASC 初始化（Player 在 PossessedBy + OnRep_PlayerState；AI 在 PossessedBy 调用）。
 	virtual void InitAbilityActorInfo();
 
@@ -76,4 +82,11 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "TS|Weapon")
 	TObjectPtr<UTSCombatComponent> CombatComponent;
+
+	// 是否已进入死亡流程（与 State.Dead tag 保持一致，用于防重入）。
+	bool bDead = false;
+
+	// 死亡瞬间缓存的控制器。
+	UPROPERTY()
+	TObjectPtr<AController> DeathController;
 };

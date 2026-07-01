@@ -10,6 +10,9 @@ class UTSWeaponDataAsset;
 class USkeletalMeshComponent;
 class UStaticMeshComponent;
 
+// 弹药变化动态多播（弹匣余弹 / 备弹），供 HUD 等订阅刷新（模块9）。
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAmmoChanged, int32, ClipAmmo, int32, ReserveAmmo);
+
 UCLASS()
 class AI_TPSDEMO2_API ATSWeaponBase : public AActor
 {
@@ -17,6 +20,10 @@ class AI_TPSDEMO2_API ATSWeaponBase : public AActor
 
 public:
 	ATSWeaponBase();
+
+	// 弹药变化广播（InitializeFromData / ConsumeAmmo / ApplyReload 后触发）。
+	UPROPERTY(BlueprintAssignable, Category = "TS|Weapon")
+	FOnAmmoChanged OnAmmoChanged;
 
 	// 用 DataAsset 初始化运行时弹药。
 	void InitializeFromData(UTSWeaponDataAsset* InWeaponData);

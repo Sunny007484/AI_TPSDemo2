@@ -12,9 +12,12 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
+#include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
+#include "GameFramework/GameModeBase.h"
 #include "GameFramework/PlayerController.h"
+#include "TimerManager.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "InputActionValue.h"
 #include "InputAction.h"
@@ -136,6 +139,43 @@ void ATSPlayerCharacter::Tick(float DeltaSeconds)
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(INDEX_NONE, 0.f, FColor::Cyan, DebugText);
+	}
+}
+
+void ATSPlayerCharacter::OnDeath()
+{
+	Super::OnDeath();
+
+	// 取死亡时缓存的 PlayerController 并禁用输入。
+	if (APlayerController* PC = Cast<APlayerController>(GetDeathController()))
+	{
+		DisableInput(PC);
+	}
+
+	// 仅在 authority 侧安排重生定时器（决策点锁定：延时 3.0s 自动重生）。
+	if (HasAuthority())
+	{
+		FTimerHandle RespawnTimerHandle;
+		GetWorldTimerManager().SetTimer(RespawnTimerHandle,
+			FTimerDelegate::CreateWeakLambda(this, [this]()
+			{
+				// 缓存控制器，因为 UnPossess 后 GetController() 失效。
+				AController* CachedController = GetDeathController();
+				if (UWorld* World = GetWorld())
+				{
+					if (AGameModeBase* GM = World->GetAuthGameMode())
+					{
+						if (CachedController)
+						{
+							CachedController->UnPossess();
+							GM->RestartPlayer(CachedController);
+						}
+					}
+				}
+				// 销毁当前 ragdoll Pawn。
+				Destroy();
+			}),
+			3.0f, false);
 	}
 }
 

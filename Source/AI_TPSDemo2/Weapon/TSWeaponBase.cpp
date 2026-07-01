@@ -49,6 +49,9 @@ void ATSWeaponBase::InitializeFromData(UTSWeaponDataAsset* InWeaponData)
 
 	CurrentAmmo = WeaponData->ClipSize;
 	CurrentReserve = WeaponData->MaxReserveAmmo;
+
+	// 通知 HUD 等订阅者刷新弹药显示。
+	OnAmmoChanged.Broadcast(CurrentAmmo, CurrentReserve);
 }
 
 void ATSWeaponBase::OnRep_WeaponData()
@@ -71,6 +74,9 @@ void ATSWeaponBase::ConsumeAmmo()
 	{
 		--CurrentAmmo;
 	}
+
+	// 开火扣弹后广播，HUD 据此刷新并触发准星扩散脉冲。
+	OnAmmoChanged.Broadcast(CurrentAmmo, CurrentReserve);
 }
 
 int32 ATSWeaponBase::CalcReloadAmount() const
@@ -87,6 +93,9 @@ void ATSWeaponBase::ApplyReload()
 	const int32 ReloadAmount = CalcReloadAmount();
 	CurrentAmmo += ReloadAmount;
 	CurrentReserve -= ReloadAmount;
+
+	// 换弹结算后广播最新弹药。
+	OnAmmoChanged.Broadcast(CurrentAmmo, CurrentReserve);
 }
 
 FVector ATSWeaponBase::GetMuzzleLocation() const
